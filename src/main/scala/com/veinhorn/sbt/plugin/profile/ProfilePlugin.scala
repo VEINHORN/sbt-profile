@@ -91,7 +91,11 @@ object ProfilePlugin extends AutoPlugin {
     selectProfile := {
       val args = spaceDelimited("").parsed
 
-      if (args.size == 1) {
+      profiles ~= { profile =>
+        println("cleaning profiles...")
+        List.empty[Profile]
+      }
+      /*if (args.size == 1) {
         profiles ~= { profile =>
           val found = profile.find(_.id == args(0))
           if (found.isDefined) profile.map(_.copy(default = false))
@@ -107,8 +111,8 @@ object ProfilePlugin extends AutoPlugin {
         }
       } else {
         println("Cannot select this profile")
-      }
-      }
+      }*/
+    }
     //,onLoad in Global ~= (init compose _) // some init actions
   )
 }
