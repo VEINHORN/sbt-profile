@@ -12,45 +12,30 @@ import scala.io.Source
   * Created by Boris Korogvich on 12.09.2017.
   */
 object ProfilePlugin extends AutoPlugin {
-  type Property = Tuple2[String, String]
+  type Property = (String, String)
 
   case class Profile(id: String,
                      properties: Seq[Property] = List.empty,
-                     default: Boolean = false)
+                     default: Boolean = false,
+                     resourceDirs: Seq[File] = List.empty)
 
   object autoImport {
     // Settings
     val profiles = settingKey[Seq[Profile]]("Specify profiles")
     // Tasks
     lazy val showProfiles = taskKey[Unit]("Show all profiles")
-    lazy val showProfileProperties = inputKey[Unit]("Show profile properties")
-    lazy val applyProfile = taskKey[Unit]("Apply plugin settings")
-
-    lazy val selectProfile = inputKey[Unit]("Select profile")
   }
 
   import autoImport._
 
-  /*private val init = (state: State) => {
-    println("initializing...")
-    state
-  }*/
-
-  override lazy val projectSettings = Seq(
-    showProfiles := {
-      profiles.value.map {
-        case Profile(id, _, true)  => s"  -$id *"
-        case Profile(id, _, false) => s"  -$id"
-      } foreach println
+  lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
+    /** By default add resource directories from default profile */
+    (unmanagedResourceDirectories in Compile) ++= {
+      (profiles in Compile).value.find(_.default).map(_.resourceDirs) getOrElse List.empty
     },
-    /** Should be an ability to print properties for multiple profiles */
-    showProfileProperties := {
-      val args = spaceDelimited("").parsed
 
-      args.foreach(println)
-    },
-    /** Apply default profile or passed as parameter */
-    applyProfile := {
+    /** Replace properties in copied resources with properties from default profile */
+    (copyResources in Compile) := {
       def replaceInFile(resFile: File) = {
         println(s"Replacing ${resFile.toPath.toString} ...")
 
@@ -60,59 +45,51 @@ object ProfilePlugin extends AutoPlugin {
         profiles.value.find(_.default).foreach { profile =>
           println(s"Selected *${profile.id}* profile")
           profile.properties.foreach { case (key, value) =>
-              val regex = "\\$\\{" + key + "\\}"
+            val regex = "\\$\\{" + key + "\\}"
 
-              replaced = replaced.replaceAll(regex, value)
-              if (resFile.getName == "creds.properties") {
-                println("regex=" + regex)
-                println("resource=" + res)
-                println("replaced=" + replaced)
-              }
+            replaced = replaced.replaceAll(regex, value)
           }
         }
         new PrintWriter(resFile) { write(replaced); close() }
       }
 
-      (copyResources in Compile).value
+      val copied = (copyResources in Compile).value
 
-      val resourceFiles = (resources in Compile).value
       val targetDir = (classDirectory in Compile).value
-
-      /*println("=== Resources")
-      resourceFiles.filter(_.isFile).foreach(f => println(f.toPath.toString))
-
-      println("=== Resources in target")
-      Option(targetDir.listFiles()).map(_.filter(_.isFile)).foreach(_.foreach(f => println(f.toPath.toString)))*/
 
       Option(targetDir.listFiles())
         .map(_.filter(_.isFile))
         .foreach(_.foreach(replaceInFile))
-    },
-    selectProfile := {
-      val args = spaceDelimited("").parsed
 
-      profiles ~= { profile =>
-        println("cleaning profiles...")
-        List.empty[Profile]
-      }
-      /*if (args.size == 1) {
-        profiles ~= { profile =>
-          val found = profile.find(_.id == args(0))
-          if (found.isDefined) profile.map(_.copy(default = false))
-              .map { p =>
-                if (p.id == args.head) p.copy(default = true)
-                p
-              }
-          else profile
-          // profile
-          //profile map {
-          //  case p@Profile(id, _, _) if id == args(0) => p.copy()
-          // }
+      copied
+    },
+
+    showProfiles := {
+      println("Profiles:")
+      profiles.value.map {
+        case Profile(id, _, true, _)  => s"  -$id *"
+        case Profile(id, _, false, _) => s"  -$id"
+      } foreach println
+    },
+
+    commands ++= Seq(
+      Command.single("selectProfile") { (state, profile) =>
+        println(s"Selecting profile: $profile")
+
+        val extracted = Project.extract(state)
+
+        val modified = profiles.value.map {
+          case p@Profile(_, _, true, _)                => p.copy(default = false)
+          case p@Profile(id, _, _, _) if id == profile => p.copy(default = true)
         }
-      } else {
-        println("Cannot select this profile")
-      }*/
-    }
-    //,onLoad in Global ~= (init compose _) // some init actions
+
+        extracted.append(Seq(
+          profiles := modified
+        ), state)
+      }
+    )
   )
+
+  override lazy val projectSettings = baseSettings
+
 }

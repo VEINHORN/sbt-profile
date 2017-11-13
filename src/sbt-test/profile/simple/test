@@ -1,5 +1,6 @@
+> unmanagedResourceDirectories
+> package
 > showProfiles
-
-# Apply current default profile
-> applyProfile
+> selectProfile prod
+> showProfiles
 $ pause
