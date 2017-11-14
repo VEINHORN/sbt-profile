@@ -17,11 +17,20 @@ lazy val root = (project in file("."))
         resourceDirs = (baseDirectory.value / "src/main/profiles/dev") :: Nil
       ),
       Profile(
+        id = "staging",
+        properties = List(
+          "db.username" -> "StagingUser",
+          "db.password" -> "StagingPass456"
+        ),
+        resourceDirs = (baseDirectory.value / "src/main/profiles/staging") :: Nil
+      ),
+      Profile(
         id = "prod",
         properties = List(
           "db.username" -> "ProdUser",
-          "db.password" -> "ProdPass456"
-        )
+          "db.password" -> "ProdPass789"
+        ),
+        resourceDirs = (baseDirectory.value / "src/main/profiles/prod") :: Nil
       )
     )
   )

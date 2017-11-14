@@ -21,9 +21,9 @@ object ProfilePlugin extends AutoPlugin {
 
   object autoImport {
     // Settings
-    val profiles = settingKey[Seq[Profile]]("Specify profiles")
+    val profiles: SettingKey[Seq[Profile]] = settingKey[Seq[Profile]]("Specify profiles")
     // Tasks
-    lazy val showProfiles = taskKey[Unit]("Show all profiles")
+    lazy val showProfiles: TaskKey[Unit] = taskKey[Unit]("Show all profiles")
   }
 
   import autoImport._
@@ -31,7 +31,7 @@ object ProfilePlugin extends AutoPlugin {
   lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
     /** By default add resource directories from default profile */
     (unmanagedResourceDirectories in Compile) ++= {
-      (profiles in Compile).value.find(_.default).map(_.resourceDirs) getOrElse List.empty
+      profiles.value.find(_.default).map(_.resourceDirs) getOrElse List.empty
     },
 
     /** Replace properties in copied resources with properties from default profile */
@@ -44,6 +44,7 @@ object ProfilePlugin extends AutoPlugin {
 
         profiles.value.find(_.default).foreach { profile =>
           println(s"Selected *${profile.id}* profile")
+
           profile.properties.foreach { case (key, value) =>
             val regex = "\\$\\{" + key + "\\}"
 
@@ -64,11 +65,11 @@ object ProfilePlugin extends AutoPlugin {
       copied
     },
 
-    showProfiles := {
+    (showProfiles in Compile) := {
       println("Profiles:")
       profiles.value.map {
-        case Profile(id, _, true, _)  => s"  -$id *"
-        case Profile(id, _, false, _) => s"  -$id"
+        case Profile(id, _, true, _)  => s"\t-$id *"
+        case Profile(id, _, false, _) => s"\t-$id"
       } foreach println
     },
 
@@ -78,18 +79,24 @@ object ProfilePlugin extends AutoPlugin {
 
         val extracted = Project.extract(state)
 
-        val modified = profiles.value.map {
+        val modifiedProfiles = profiles.value.map {
           case p@Profile(_, _, true, _)                => p.copy(default = false)
           case p@Profile(id, _, _, _) if id == profile => p.copy(default = true)
+          case p                                       => p
+        }
+
+        val modifiedResources = {
+          ((unmanagedResourceDirectories in Compile).value.head :: Nil) ++ modifiedProfiles.find(_.default).map(_.resourceDirs).getOrElse(List.empty)
         }
 
         extracted.append(Seq(
-          profiles := modified
+          profiles := modifiedProfiles,
+          (unmanagedResourceDirectories in Compile) := modifiedResources
         ), state)
       }
     )
   )
 
-  override lazy val projectSettings = baseSettings
+  override lazy val projectSettings: Seq[Def.Setting[_]] = baseSettings
 
 }
