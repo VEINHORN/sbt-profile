@@ -21,9 +21,9 @@ object ProfilePlugin extends AutoPlugin {
 
   object autoImport {
     // Settings
-    val profiles: SettingKey[Seq[Profile]] = settingKey[Seq[Profile]]("Specify profiles")
+    val profiles: SettingKey[Seq[Profile]] = settingKey[Seq[Profile]]("All specified profiles")
     // Tasks
-    lazy val showProfiles: TaskKey[Unit] = taskKey[Unit]("Show all profiles")
+    lazy val showProfiles: TaskKey[Unit] = taskKey[Unit]("Show all available profiles")
   }
 
   import autoImport._
