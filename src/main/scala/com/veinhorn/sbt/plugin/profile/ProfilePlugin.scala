@@ -43,12 +43,8 @@ object ProfilePlugin extends AutoPlugin {
         var replaced = res
 
         profiles.value.find(_.default).foreach { profile =>
-          println(s"Selected *${profile.id}* profile")
-
           profile.properties.foreach { case (key, value) =>
-            val regex = "\\$\\{" + key + "\\}"
-
-            replaced = replaced.replaceAll(regex, value)
+            replaced = replaced.replaceAll("\\$\\{" + key + "\\}", value)
           }
         }
         new PrintWriter(resFile) { write(replaced); close() }
@@ -73,29 +69,34 @@ object ProfilePlugin extends AutoPlugin {
       } foreach println
     },
 
-    commands ++= Seq(
-      Command.single("selectProfile") { (state, profile) =>
-        println(s"Selecting profile: $profile")
+    commands ++= Seq(selectProfile)
+  )
+
+  /** Selects provided profile */
+  def selectProfile: Command = Command.single("selectProfile") { (state, profile) =>
+    val log = Project.extract(state).get(sLog)
+    val profiles = Project.extract(state).get(autoImport.profiles)
+
+    profiles.find(_.id == profile) match {
+      case Some(p) =>
+        log.info(s"Selected $profile profile")
 
         val extracted = Project.extract(state)
-
-        val modifiedProfiles = profiles.value.map {
-          case p@Profile(_, _, true, _)                => p.copy(default = false)
+        val modifiedProfiles = profiles.map {
           case p@Profile(id, _, _, _) if id == profile => p.copy(default = true)
-          case p                                       => p
+          case p@Profile(_, _, default, _)             => if (!default) p else p.copy(default = false)
         }
-
-        val modifiedResources = {
-          ((unmanagedResourceDirectories in Compile).value.head :: Nil) ++ modifiedProfiles.find(_.default).map(_.resourceDirs).getOrElse(List.empty)
-        }
-
         extracted.append(Seq(
-          profiles := modifiedProfiles,
-          (unmanagedResourceDirectories in Compile) := modifiedResources
+          autoImport.profiles := modifiedProfiles,
+          (unmanagedResourceDirectories in Compile) ~= { p =>
+            p.head +: modifiedProfiles.find(_.default).map(_.resourceDirs).getOrElse(List.empty)
+          }
         ), state)
-      }
-    )
-  )
+      case None   =>
+        log.info(s"Profile with name $profile does not exist")
+        state
+    }
+  }
 
   override lazy val projectSettings: Seq[Def.Setting[_]] = baseSettings
 
