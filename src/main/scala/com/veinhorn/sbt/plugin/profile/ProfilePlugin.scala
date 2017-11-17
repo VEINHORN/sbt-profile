@@ -27,54 +27,6 @@ object ProfilePlugin extends AutoPlugin {
 
   import autoImport._
 
-  lazy val baseSettings: Seq[Def.Setting[_]] = Seq(
-    /** By default add resource directories from default profile */
-    (unmanagedResourceDirectories in Compile) ++= {
-      profiles.value.find(_.default).map(_.resourceDirs) getOrElse List.empty
-    },
-
-    (unmanagedSourceDirectories in Compile) ++= {
-      profiles.value.find(_.default).map(_.sourceDirs) getOrElse List.empty
-    },
-
-    /** Replace properties in copied resources with properties from default profile */
-    (copyResources in Compile) := {
-      def replaceInFile(resFile: File) = {
-        println(s"Replacing ${resFile.toPath.toString} ...")
-
-        val res = Source.fromFile(resFile).mkString
-        var replaced = res
-
-        profiles.value.find(_.default).foreach { profile =>
-          profile.properties.foreach { case (key, value) =>
-            replaced = replaced.replaceAll("\\$\\{" + key + "\\}", value)
-          }
-        }
-        new PrintWriter(resFile) { write(replaced); close() }
-      }
-
-      val copied = (copyResources in Compile).value
-
-      val targetDir = (classDirectory in Compile).value
-
-      Option(targetDir.listFiles())
-        .map(_.filter(_.isFile))
-        .foreach(_.foreach(replaceInFile))
-
-      copied
-    },
-
-    (showProfiles in Compile) := {
-      println("Profiles:")
-      profiles.value.map {
-        case Profile(id, _, true, _, _)  => s"\t-$id *"
-        case Profile(id, _, false, _, _) => s"\t-$id"
-      } foreach println
-    },
-
-    commands ++= Seq(selectProfile)
-  )
-
   /** Selects provided profile */
   def selectProfile: Command = Command.single("selectProfile") { (state, profile) =>
     val log = Project.extract(state).get(sLog)
@@ -94,14 +46,14 @@ object ProfilePlugin extends AutoPlugin {
           autoImport.profiles := modifiedProfiles,
           (unmanagedResourceDirectories in Compile) ~= { resources =>
             val newResources = resources.filterNot(res => profiles.find(_.default).exists(_.resourceDirs.contains(res)))
-                                        .filterNot(res => modifiedProfiles.find(_.default).exists(_.resourceDirs.contains(res)))
+              .filterNot(res => modifiedProfiles.find(_.default).exists(_.resourceDirs.contains(res)))
             newResources ++ modifiedProfiles.find(_.default).map(_.resourceDirs).getOrElse(List.empty)
           },
 
           (unmanagedSourceDirectories in Compile) ~= { sources => // need to remove source directories from previous profile
             // Filter source directories with possible duplicates and from previous selected profile
             val newSources = sources.filterNot(src => profiles.find(_.default).exists(_.sourceDirs.contains(src)))
-                                    .filterNot(src => modifiedProfiles.find(_.default).exists(_.sourceDirs.contains(src)))
+              .filterNot(src => modifiedProfiles.find(_.default).exists(_.sourceDirs.contains(src)))
             newSources ++ modifiedProfiles.find(_.default).map(_.sourceDirs).getOrElse(List.empty)
           }
         ), state)
@@ -111,6 +63,52 @@ object ProfilePlugin extends AutoPlugin {
     }
   }
 
-  override lazy val projectSettings: Seq[Def.Setting[_]] = baseSettings
+  lazy val baseProfileSettings: Seq[Def.Setting[_]] = Seq(
+    /** By default add resource directories from default profile */
+    unmanagedResourceDirectories ++= {
+      profiles.value.find(_.default).map(_.resourceDirs) getOrElse List.empty
+    },
 
+    unmanagedSourceDirectories ++= {
+      profiles.value.find(_.default).map(_.sourceDirs) getOrElse List.empty
+    },
+
+    /** Replace properties in copied resources with properties from default profile */
+    copyResources := {
+      def replaceInFile(resFile: File) = {
+        println(s"Replacing ${resFile.toPath.toString} ...")
+
+        val res = Source.fromFile(resFile).mkString
+        var replaced = res
+
+        profiles.value.find(_.default).foreach { profile =>
+          profile.properties.foreach { case (key, value) =>
+            replaced = replaced.replaceAll("\\$\\{" + key + "\\}", value)
+          }
+        }
+        new PrintWriter(resFile) { write(replaced); close() }
+      }
+
+      val copied = copyResources.value
+
+      val targetDir = classDirectory.value
+
+      Option(targetDir.listFiles())
+        .map(_.filter(_.isFile))
+        .foreach(_.foreach(replaceInFile))
+
+      copied
+    },
+
+    showProfiles := {
+      println("Profiles:")
+      profiles.value.map {
+        case Profile(id, _, true, _, _)  => s"\t-$id *"
+        case Profile(id, _, false, _, _) => s"\t-$id"
+      } foreach println
+    }
+  )
+
+  override lazy val projectSettings: Seq[Def.Setting[_]] =
+    Seq(commands += selectProfile) ++ inConfig(Compile)(baseProfileSettings)
 }
