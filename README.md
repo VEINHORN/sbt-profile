@@ -1,5 +1,6 @@
 # sbt-profile
 
+[![Travis](https://travis-ci.org/VEINHORN/sbt-profile.svg?branch=master)]()
 [![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/sbt-profile-profile/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
 
 The `sbt-profile` plugin allows you to customize your build process depending on selected environment in Maven-like style. You can specify different configuration files and properties for your `dev`, `test`, `staging`, `prod` environment or create your own profile structure.
