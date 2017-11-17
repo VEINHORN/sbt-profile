@@ -1,5 +1,5 @@
 package com
 
 object Main extends App {
-  println("hello...")
+  println(new Profile().name)
 }

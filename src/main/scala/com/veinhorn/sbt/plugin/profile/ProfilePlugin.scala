@@ -4,7 +4,6 @@ import java.io.PrintWriter
 
 import sbt.Keys._
 import sbt._
-import sbt.complete.Parsers.spaceDelimited
 
 import scala.io.Source
 
@@ -17,12 +16,12 @@ object ProfilePlugin extends AutoPlugin {
   case class Profile(id: String,
                      properties: Seq[Property] = List.empty,
                      default: Boolean = false,
-                     resourceDirs: Seq[File] = List.empty)
+                     resourceDirs: Seq[File] = List.empty,
+                     sourceDirs: Seq[File] = List.empty)
 
   object autoImport {
-    // Settings
     val profiles: SettingKey[Seq[Profile]] = settingKey[Seq[Profile]]("All specified profiles")
-    // Tasks
+
     lazy val showProfiles: TaskKey[Unit] = taskKey[Unit]("Show all available profiles")
   }
 
@@ -32,6 +31,10 @@ object ProfilePlugin extends AutoPlugin {
     /** By default add resource directories from default profile */
     (unmanagedResourceDirectories in Compile) ++= {
       profiles.value.find(_.default).map(_.resourceDirs) getOrElse List.empty
+    },
+
+    (unmanagedSourceDirectories in Compile) ++= {
+      profiles.value.find(_.default).map(_.sourceDirs) getOrElse List.empty
     },
 
     /** Replace properties in copied resources with properties from default profile */
@@ -64,8 +67,8 @@ object ProfilePlugin extends AutoPlugin {
     (showProfiles in Compile) := {
       println("Profiles:")
       profiles.value.map {
-        case Profile(id, _, true, _)  => s"\t-$id *"
-        case Profile(id, _, false, _) => s"\t-$id"
+        case Profile(id, _, true, _, _)  => s"\t-$id *"
+        case Profile(id, _, false, _, _) => s"\t-$id"
       } foreach println
     },
 
@@ -82,14 +85,24 @@ object ProfilePlugin extends AutoPlugin {
         log.info(s"Selected $profile profile")
 
         val extracted = Project.extract(state)
+        // Select new default profile
         val modifiedProfiles = profiles.map {
-          case p@Profile(id, _, _, _) if id == profile => p.copy(default = true)
-          case p@Profile(_, _, default, _)             => if (!default) p else p.copy(default = false)
+          case p@Profile(id, _, _, _, _) if id == profile => p.copy(default = true)
+          case p@Profile(_, _, default, _, _)             => if (!default) p else p.copy(default = false)
         }
         extracted.append(Seq(
           autoImport.profiles := modifiedProfiles,
-          (unmanagedResourceDirectories in Compile) ~= { p =>
-            p.head +: modifiedProfiles.find(_.default).map(_.resourceDirs).getOrElse(List.empty)
+          (unmanagedResourceDirectories in Compile) ~= { resources =>
+            val newResources = resources.filterNot(res => profiles.find(_.default).exists(_.resourceDirs.contains(res)))
+                                        .filterNot(res => modifiedProfiles.find(_.default).exists(_.resourceDirs.contains(res)))
+            newResources ++ modifiedProfiles.find(_.default).map(_.resourceDirs).getOrElse(List.empty)
+          },
+
+          (unmanagedSourceDirectories in Compile) ~= { sources => // need to remove source directories from previous profile
+            // Filter source directories with possible duplicates and from previous selected profile
+            val newSources = sources.filterNot(src => profiles.find(_.default).exists(_.sourceDirs.contains(src)))
+                                    .filterNot(src => modifiedProfiles.find(_.default).exists(_.sourceDirs.contains(src)))
+            newSources ++ modifiedProfiles.find(_.default).map(_.sourceDirs).getOrElse(List.empty)
           }
         ), state)
       case None   =>

@@ -1,12 +1,16 @@
-# > package
-
-> showProfiles
-> unmanagedResourceDirectories
-
 > selectProfile prod
-> showProfiles
 > unmanagedResourceDirectories
-
+> unmanagedSourceDirectories
 > package
+> run
+
+# > showProfiles
+# > unmanagedResourceDirectories
+
+# > selectProfile prod
+# > showProfiles
+# > unmanagedResourceDirectories
+
+# > package
 
 $ pause

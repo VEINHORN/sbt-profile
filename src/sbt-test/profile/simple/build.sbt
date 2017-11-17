@@ -14,7 +14,8 @@ lazy val root = (project in file("."))
           "db.password" -> "DevPass123"
         ),
         default = true,
-        resourceDirs = (baseDirectory.value / "src/main/profiles/dev") :: Nil
+        resourceDirs = (baseDirectory.value / "src/main/profiles/dev/res") :: Nil,
+        sourceDirs = (baseDirectory.value / "src/main/profiles/dev/src") :: Nil
       ),
       Profile(
         id = "staging",
@@ -22,7 +23,7 @@ lazy val root = (project in file("."))
           "db.username" -> "StagingUser",
           "db.password" -> "StagingPass456"
         ),
-        resourceDirs = (baseDirectory.value / "src/main/profiles/staging") :: Nil
+        resourceDirs = (baseDirectory.value / "src/main/profiles/staging/res") :: Nil
       ),
       Profile(
         id = "prod",
@@ -30,7 +31,8 @@ lazy val root = (project in file("."))
           "db.username" -> "ProdUser",
           "db.password" -> "ProdPass789"
         ),
-        resourceDirs = (baseDirectory.value / "src/main/profiles/prod") :: Nil
+        resourceDirs = (baseDirectory.value / "src/main/profiles/prod/res") :: Nil,
+        sourceDirs = (baseDirectory.value / "src/main/profiles/prod/src") :: Nil
       )
     )
   )
