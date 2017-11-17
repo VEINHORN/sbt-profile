@@ -3,7 +3,7 @@ import sbt.ScriptedPlugin.autoImport.scriptedBufferLog
 lazy val root = (project in file("."))
   .settings(
     name := "sbt-profile",
-    version := "0.1",
+    version := "0.1-SNAPSHOT",
     organization := "com.veinhorn.sbt.plugin",
     scalaVersion := "2.12.3",
     sbtPlugin := true,
