@@ -3,7 +3,7 @@ import sbt.ScriptedPlugin.autoImport.scriptedBufferLog
 lazy val root = (project in file("."))
   .settings(
     name := "sbt-profile",
-    version := "0.1-SNAPSHOT",
+    version := "0.1.2",
     organization := "com.veinhorn.sbt.plugin",
     scalaVersion := "2.12.3",
     sbtPlugin := true,
@@ -14,5 +14,9 @@ lazy val root = (project in file("."))
     scriptedLaunchOpts := { scriptedLaunchOpts.value ++
       Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
     },
-    scriptedBufferLog := false
+    scriptedBufferLog := false,
+
+    bintrayRepository := "maven",
+    bintrayPackage := "sbt-profile",
+    publishMavenStyle := false
   )
