@@ -12,6 +12,14 @@ What does `sbt-profile` can do:
 
 ## Installation
 
+Add the following to your sbt project/plugins.sbt file:
+
+```scala
+resolvers += Resolver.bintrayRepo("veinhorn", "maven")
+addSbtPlugin("com.veinhorn.sbt.plugin" % "sbt-profile" % "0.1")
+```
+
+
 ## Usage
 Just specify your profiles and mark default profile which be used by default.
 
