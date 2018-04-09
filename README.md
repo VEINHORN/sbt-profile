@@ -65,7 +65,7 @@ lazy val root = (project in file("."))
 
 ## License
 
-    Copyright 2017, 2017 Boris Korogvich
+    Copyright 2017, 2018 Boris Korogvich
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
